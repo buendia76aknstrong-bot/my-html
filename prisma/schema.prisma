@@ -1,0 +1,87 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Customer {
+  id                String        @id @default(uuid()) @db.Uuid
+  name              String
+  age               Int?
+  email             String
+  phone             String
+  parentSituation   String?       @map("parent_situation")
+  applicationReason String?       @map("application_reason")
+  status            String        @default("applied") // applied / interviewing / writing / reviewing / delivered
+  createdAt         DateTime      @default(now()) @map("created_at")
+
+  interviews   Interview[]
+  manuscripts  Manuscript[]
+  deliverables Deliverable[]
+  feedbacks    Feedback[]
+
+  @@map("customers")
+}
+
+model Interview {
+  id              String    @id @default(uuid()) @db.Uuid
+  customerId      String    @map("customer_id") @db.Uuid
+  sessionNumber   Int       @map("session_number") // 1-6
+  scheduledAt     DateTime? @map("scheduled_at")
+  completedAt     DateTime? @map("completed_at")
+  audioFileUrl    String?   @map("audio_file_url")
+  transcription   String?
+  consentAudioUrl String?   @map("consent_audio_url")
+  status          String    @default("scheduled") // scheduled / completed / failed
+
+  customer Customer @relation(fields: [customerId], references: [id])
+
+  @@map("interviews")
+}
+
+model Manuscript {
+  id                  String  @id @default(uuid()) @db.Uuid
+  customerId          String  @map("customer_id") @db.Uuid
+  chapterNumber       Int     @map("chapter_number") // 1-5
+  rawContent          String? @map("raw_content")
+  riskCheckedContent  String? @map("risk_checked_content")
+  riskCheckLog        Json?   @map("risk_check_log")
+  status              String  @default("draft") // draft / checked / approved
+
+  customer Customer @relation(fields: [customerId], references: [id])
+
+  @@map("manuscripts")
+}
+
+model Deliverable {
+  id              String    @id @default(uuid()) @db.Uuid
+  customerId      String    @map("customer_id") @db.Uuid
+  pdfUrl          String?   @map("pdf_url")
+  deliveredAt     DateTime? @map("delivered_at")
+  disclaimerText  String    @default("本書はご本人の語りをもとにAIが編集した記録です。プライバシー保護のため、一部表現を調整しています。") @map("disclaimer_text")
+
+  customer Customer @relation(fields: [customerId], references: [id])
+
+  @@map("deliverables")
+}
+
+model Feedback {
+  id                    String   @id @default(uuid()) @db.Uuid
+  customerId            String   @map("customer_id") @db.Uuid
+  overallSatisfaction   Int?     @map("overall_satisfaction") // 1-5
+  accuracy              Int?     // 1-5
+  readability           Int?     // 1-5
+  interviewExperience   Int?     @map("interview_experience") // 1-5
+  nps                   Int?     // 0-10
+  improvements          String?
+  fairPrice             String?  @map("fair_price")
+  desiredFeatures       String?  @map("desired_features")
+  createdAt             DateTime @default(now()) @map("created_at")
+
+  customer Customer @relation(fields: [customerId], references: [id])
+
+  @@map("feedbacks")
+}
